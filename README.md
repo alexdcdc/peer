@@ -1,93 +1,112 @@
 # Peer: Student Engagement Monitoring System
 
-Peer is a teacher-facing dashboard for reviewing student engagement signals from online class sessions. The current repo combines a Supabase-authenticated Next.js dashboard, a FastAPI backend that serves engagement data and Recall.ai webhooks, a standalone Recall bot utility, and a local facial-emotion analysis pipeline.
+Peer is an AI-assisted classroom analytics platform built to help educators identify disengagement early in online learning environments. It combines meeting capture, facial-emotion analysis, engagement scoring, and a teacher dashboard so instructors can quickly spot students who may need support.
 
-## What The Product Actually Does Today
+## Overview
 
-- Shows aggregate engagement metrics, recent sessions, and at-risk students in the dashboard
-- Lists students with average engagement and session counts from Supabase-backed data
-- Supports Supabase Auth for dashboard login/signup, including Google OAuth
-- Accepts Recall.ai webhook events, fetches bot details, and downloads meeting recordings
-- Processes exported emotion-analysis JSON into `students`, `class_sessions`, and `class_attendances`
-- Runs an automated email workflow that identifies students with engagement issues and sends/logs follow-up emails
+Peer was designed around a simple goal: make it easier for teachers to understand how students are responding during virtual class sessions. The platform brings together meeting data, engagement signals, and automated follow-up workflows in one place.
 
-## Current Scope And Limitations
+At a high level, Peer enables educators to:
 
-- The dashboard home page and student tracking page are wired to live backend data
-- The email center and meeting-scheduling UI are currently static prototype views, not fully connected workflows
-- There is no FastAPI `POST /create-bot` endpoint in the current backend
-- Recall bot creation happens through scripts in [`GoogleMeetAPI`](./GoogleMeetAPI), especially `create_and_monitor.py`
-- SMTP credentials are currently hardcoded in [`api/mastra_agent.py`](./api/mastra_agent.py), so email configuration is not fully environment-driven yet
+- review class-level engagement trends
+- identify students with declining participation
+- monitor confusion and disengagement signals
+- trigger follow-up outreach for students who may be struggling
 
-## Repo Structure
+## Product Highlights
 
-- `api/`: FastAPI app, Supabase/Postgres access, Recall webhook handling, and email automation
-- `student-engagement-dashboard/`: Next.js dashboard with Supabase Auth and UI for analytics, students, and email prototypes
-- `GoogleMeetAPI/`: standalone scripts for creating and inspecting Recall.ai bots
-- `Facial-Emotion-Recognition-using-OpenCV-and-Deepface-main/`: local emotion analysis code
-- `test_data.json`: sample processed emotion-analysis output for ingestion testing
+- **Teacher Dashboard**: a modern web interface for reviewing engagement metrics, recent sessions, and at-risk students
+- **Student-Level Insights**: per-student engagement summaries with session counts and class history
+- **Automated Monitoring Pipeline**: processes meeting artifacts into structured attendance and engagement records
+- **Recall.ai Integration**: supports meeting-bot workflows and webhook-driven recording retrieval
+- **AI-Driven Follow-Up**: flags students based on engagement thresholds and supports automated outreach workflows
+- **Secure Authentication**: uses Supabase Auth for teacher login and protected dashboard access
 
-## Architecture
+## Tech Stack
 
 ### Frontend
 
-The dashboard is a Next.js app that:
-
-- requires Supabase authentication for protected routes
-- proxies `/api/*` requests to `http://localhost:8000/*`
-- fetches live data for:
-  - `GET /metrics`
-  - `GET /class-sessions`
-  - `GET /students`
-  - `GET /students/at-risk`
+- Next.js
+- React
+- TypeScript
+- Tailwind CSS
+- Supabase Auth
 
 ### Backend
 
-The FastAPI app in [`api/api.py`](./api/api.py) currently exposes:
+- FastAPI
+- Python
+- SQLAlchemy
+- Supabase
+- PostgreSQL
 
-- `GET /`
-- `GET /health`
-- `GET /students`
-- `GET /students/at-risk`
-- `GET /class-sessions`
-- `GET /metrics`
-- `POST /webhook/recall/`
-- `POST /mastra/process-engagement`
-- `GET /mastra/students-with-issues`
-- `POST /mastra/send-test-email`
+### AI / Data Processing
 
-### Data Layer
+- DeepFace
+- OpenCV
+- Recall.ai
 
-This project uses both:
+## System Architecture
 
-- Supabase client access for inserts, email logging, and some student lookups
-- direct Postgres access through `DATABASE_URL` for dashboard queries via SQLAlchemy
+Peer is organized as a multi-component application:
 
-## Prerequisites
+- `student-engagement-dashboard/`: Next.js dashboard used by educators
+- `api/`: FastAPI backend serving analytics, webhook processing, and automation workflows
+- `GoogleMeetAPI/`: Recall.ai bot utilities for meeting capture workflows
+- `Facial-Emotion-Recognition-using-OpenCV-and-Deepface-main/`: video analysis and engagement signal extraction
+
+## How It Works
+
+1. A meeting is captured through the Recall.ai workflow.
+2. Meeting recordings or processed outputs are analyzed for engagement-related signals.
+3. Engagement data is written into the application database.
+4. The dashboard surfaces class metrics, student summaries, and at-risk learners.
+5. Follow-up workflows can identify students who may benefit from instructor outreach.
+
+## Dashboard Experience
+
+The teacher dashboard includes:
+
+- class-wide engagement metrics
+- recent session summaries
+- at-risk student visibility
+- student engagement tracking views
+- authenticated access for teacher accounts
+
+## API Surface
+
+The backend currently provides endpoints for:
+
+- health checks
+- student and class-session analytics
+- aggregate metrics
+- Recall.ai webhook handling
+- engagement-processing and outreach workflows
+
+## Local Development
+
+### Prerequisites
 
 - Python 3.8+
 - Node.js 18+
-- A Supabase project
-- A Recall.ai API key if you want webhook/bot functionality
+- a Supabase project
+- a Recall.ai API key for meeting-bot functionality
 
-## Environment Setup
+### Backend Environment
 
-### Backend (`api/.env`)
+Create `api/.env`:
 
 ```bash
 SUPABASE_URL=your_supabase_project_url
-SUPABASE_KEY=your_supabase_service_or_api_key
+SUPABASE_KEY=your_supabase_key
 DATABASE_URL=postgresql://user:password@host:port/postgres
 RECALLAI_API_KEY=your_recall_ai_api_key
 RECALLAI_REGION=us
 ```
 
-Notes:
+### Frontend Environment
 
-- `DATABASE_URL` is required because the API queries Postgres directly through SQLAlchemy
-- the current email sender does not read SMTP credentials from env; those values are hardcoded in `api/mastra_agent.py`
-
-### Frontend (`student-engagement-dashboard/.env.local`)
+Create `student-engagement-dashboard/.env.local`:
 
 ```bash
 NEXT_PUBLIC_SUPABASE_URL=your_supabase_project_url
@@ -95,163 +114,65 @@ NEXT_PUBLIC_SUPABASE_ANON_KEY=your_supabase_anon_key
 NEXT_PUBLIC_DEV_SUPABASE_REDIRECT_URL=http://localhost:3000
 ```
 
-## Installation
+### Install Dependencies
 
-### Backend
+Backend:
 
 ```bash
 cd api
 pip install -r requirements.txt
 ```
 
-### Frontend
+Frontend:
 
 ```bash
 cd student-engagement-dashboard
 npm install
 ```
 
-`pnpm` also works because the repo includes a `pnpm-lock.yaml`.
+### Run The App
 
-## Running The Project
-
-### 1. Start the API
+Start the API:
 
 ```bash
 cd api
 uvicorn api:app --reload --host 0.0.0.0 --port 8000
 ```
 
-### 2. Start the dashboard
+Start the dashboard:
 
 ```bash
 cd student-engagement-dashboard
 npm run dev
 ```
 
-The dashboard runs on `http://localhost:3000` and forwards frontend API calls to the FastAPI server on `http://localhost:8000`.
+The dashboard runs on `http://localhost:3000` and connects to the local FastAPI backend on `http://localhost:8000`.
 
-## Database Expectations
+## Example Workflows
 
-The code expects these tables to exist in Supabase/Postgres:
+### Process Engagement Data
 
-- `students`
-  - used fields: `id`, `first_name`, `last_name`, `email`, `face_id`
-- `class_sessions`
-  - used fields: `id`, `name`, `start_time`, `duration`
-- `class_attendances`
-  - used fields: `student_id`, `session_id`, `engaged_percentage`, `disengaged_percentage`, `confused_percentage`, `created_at`
-- `emails`
-  - used fields: `id`, `student_id`, `session_id`, `email`
+```bash
+cd api
+python test_api.py
+```
 
-`process_json_and_store()` can create placeholder students automatically when it sees new `face_id` values.
+### Run Engagement Follow-Up Workflow
 
-## Main Workflows
+```bash
+curl -X POST "http://localhost:8000/mastra/process-engagement"
+```
 
-### Dashboard Analytics
-
-After signing in, the main dashboard displays:
-
-- average engagement
-- active student count
-- average confusion rate
-- average session duration
-- recent sessions
-- at-risk students
-
-### Student Tracking
-
-The students page shows:
-
-- student name and email
-- average engagement
-- session count
-- aggregated class names
-
-### Recall.ai Recording Flow
-
-Bot creation is currently script-based:
+### Create A Meeting Bot
 
 ```bash
 cd GoogleMeetAPI
 python create_and_monitor.py "https://meet.google.com/xxx-xxxx-xxx"
 ```
 
-Once Recall.ai sends a webhook to `POST /webhook/recall/`, the backend:
-
-1. extracts the Recall bot ID from the webhook payload
-2. fetches bot details from Recall.ai
-3. finds the mixed-video download URL
-4. downloads the recording locally
-
-### JSON Ingestion Flow
-
-To ingest sample processed data:
-
-```bash
-cd api
-python test_api.py
-```
-
-This calls `process_json_and_store("../test_data.json")`, which:
-
-- creates a class session
-- creates placeholder students for unseen face IDs
-- writes per-student attendance percentages
-
-### Automated Email Processing
-
-To run the engagement email workflow:
-
-```bash
-curl -X POST "http://localhost:8000/mastra/process-engagement"
-```
-
-Helpful related endpoints:
-
-- `GET /mastra/students-with-issues`
-- `POST /mastra/send-test-email?student_id=...&session_id=...`
-
-The current logic flags students when their latest attendance record crosses these thresholds:
-
-- engagement below `50%`
-- disengagement above `70%`
-- confusion above `60%`
-
-## Testing
-
-### API ingestion test
-
-```bash
-cd api
-python test_api.py
-```
-
-### Mastra/email workflow tests
-
-```bash
-cd api
-python test_mastra_agent.py
-python test_mastra_direct.py
-```
-
-### Emotion analysis
-
-```bash
-cd Facial-Emotion-Recognition-using-OpenCV-and-Deepface-main
-python simplified_analyzer.py
-```
-
-## Known Gaps
-
-- README setup previously referenced endpoints that are not implemented; this version reflects the current codebase
-- The email center and meeting scheduler in the dashboard are presentational, not end-to-end features yet
-- `api/video_downloader.py` writes downloads to a directory named `Facial-Emotion-Recognition-using-OpenCV-and-Deepface`, while the checked-in analyzer folder is `Facial-Emotion-Recognition-using-OpenCV-and-Deepface-main`
-- `api/mastra_agent.py` should be moved to environment-based SMTP configuration before production use
-
 ## Acknowledgments
 
-- [DeepFace](https://github.com/serengil/deepface) for facial emotion recognition
-- [Recall.ai](https://recall.ai) for meeting bot and recording infrastructure
-- [Supabase](https://supabase.com) for auth and database services
-- [Next.js](https://nextjs.org) for the dashboard frontend
+- [DeepFace](https://github.com/serengil/deepface)
+- [Recall.ai](https://recall.ai)
+- [Supabase](https://supabase.com)
+- [Next.js](https://nextjs.org)
